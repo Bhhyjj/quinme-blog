@@ -1,0 +1,16 @@
+<button onclick="speakStory()">🔊 Listen</button>
+
+<script>
+function speakStory() {
+  // Get all the text on the page
+  let story = document.body.innerText;
+
+  // Use browser speech synthesis
+  let speech = new SpeechSynthesisUtterance(story);
+  speech.rate = 1;  // speed (1 = normal)
+  speech.pitch = 1; // tone
+  speech.lang = "en-US"; // language/voice
+
+  window.speechSynthesis.speak(speech);
+}
+</script>
