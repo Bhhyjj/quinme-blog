@@ -26,13 +26,16 @@
     body.dark .story-box { background:#2a2a2a; border-color:#555; }
     .delete-btn { background:crimson; margin-left:10px; }
     .install-btn { position:fixed; right:20px; bottom:20px; border-radius:8px; }
+    .muted { opacity:.8; font-size:.9em; }
+    .tts-bar { display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; margin:15px; }
+    .tts-bar select { padding:8px; min-width:240px; }
   </style>
 </head>
 <body>
   <header>
     <h1>✨ Quinme Stories ✨</h1>
     <button class="toggle" onclick="toggleTheme()">🌙</button>
-    <p>Beneath the Veil | The Tide Between Us | and more...</p>
+    <p class="muted">Beneath the Veil | The Tide Between Us | and more...</p>
   </header>
 
   <nav>
@@ -42,6 +45,17 @@
     <a href="#about" onclick="setActive(this)">About</a>
     <a href="#contact" onclick="setActive(this)">Contact</a>
   </nav>
+
+  <!-- 🎤 Voice Selection + Global Controls -->
+  <div class="tts-bar">
+    <label for="voiceSelect">🎤 Voice:</label>
+    <select id="voiceSelect" onchange="changeVoice()">
+      <option>Loading voices…</option>
+    </select>
+    <button onclick="pauseSpeech()">⏸ Pause</button>
+    <button onclick="resumeSpeech()">▶ Resume</button>
+    <button onclick="stopSpeech()">⏹ Stop</button>
+  </div>
 
   <section id="home">
     <h2>Welcome</h2>
@@ -63,7 +77,7 @@
       <button onclick="speakById('veil-text')">🔊 Listen</button>
     </div>
 
-    <h3>Your Published Stories</h3>
+    <h3>Your Published Stories (sync across devices)</h3>
     <div id="postedStories"></div>
   </section>
 
@@ -72,6 +86,7 @@
     <p>Post your new chapter here:</p>
     <textarea id="storyInput" placeholder="Start writing your story..."></textarea><br/>
     <button onclick="postStory()">Publish</button>
+    <p class="muted" id="authStatus"></p>
   </section>
 
   <section id="about">
@@ -91,66 +106,102 @@
     <p>© 2025 Quinme | All Rights Reserved</p>
   </footer>
 
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
   <script>
-    // ---- Voice (TTS)
-    function speak(text) {
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "en-US";
-      speechSynthesis.speak(u);
-    }
-    function speakById(id) {
-      const text = document.getElementById(id).innerText;
-      speak(text);
+    /* ===========================
+       VOICE (TTS) + CONTROLS
+       =========================== */
+    let voices = [];
+    let currentVoice = null;
+    let currentUtterance = null;
+
+    function populateVoices() {
+      voices = speechSynthesis.getVoices();
+      const select = document.getElementById("voiceSelect");
+      select.innerHTML = "";
+
+      if (!voices.length) {
+        const opt = document.createElement("option");
+        opt.value = "default";
+        opt.textContent = "System Default (en-US)";
+        select.appendChild(opt);
+        currentVoice = null; // let browser decide
+        return;
+      }
+
+      const saved = localStorage.getItem("ttsVoiceName");
+      voices.forEach(v => {
+        const opt = document.createElement("option");
+        opt.value = v.name;
+        opt.textContent = `${v.name} (${v.lang})${v.default ? " ★" : ""}`;
+        // preselect saved, else default, else first
+        if ((saved && v.name === saved) || (!saved && v.default)) opt.selected = true;
+        select.appendChild(opt);
+      });
+
+      const chosenName = saved || (voices.find(v => v.default)?.name) || voices[0].name;
+      currentVoice = voices.find(v => v.name === chosenName) || null;
     }
 
-    // ---- Theme
+    function changeVoice() {
+      const name = document.getElementById("voiceSelect").value;
+      localStorage.setItem("ttsVoiceName", name);
+      currentVoice = voices.find(v => v.name === name) || null;
+      // do not auto-restart speaking; user controls it
+    }
+
+    function speak(text) {
+      stopSpeech(); // avoid overlapping
+      const u = new SpeechSynthesisUtterance(text);
+      if (currentVoice) {
+        u.voice = currentVoice;
+        u.lang = currentVoice.lang;
+      } else {
+        u.lang = "en-US";
+      }
+      currentUtterance = u;
+      speechSynthesis.speak(u);
+    }
+
+    function speakById(id) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      speak(el.innerText);
+    }
+
+    function pauseSpeech() {
+      if (speechSynthesis.speaking && !speechSynthesis.paused) speechSynthesis.pause();
+    }
+    function resumeSpeech() {
+      if (speechSynthesis.paused) speechSynthesis.resume();
+    }
+    function stopSpeech() {
+      if (speechSynthesis.speaking || speechSynthesis.paused) speechSynthesis.cancel();
+      currentUtterance = null;
+    }
+
+    // Some browsers load voices asynchronously
+    speechSynthesis.onvoiceschanged = populateVoices;
+
+    /* ===========================
+       THEME + NAV
+       =========================== */
     function toggleTheme() {
       document.body.classList.toggle("dark");
       localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
     }
-
-    // ---- Stories (Local Save)
-    function postStory() {
-      const el = document.getElementById("storyInput");
-      const text = el.value.trim();
-      if (!text) return;
-      const stories = JSON.parse(localStorage.getItem("stories") || "[]");
-      stories.push(text);
-      localStorage.setItem("stories", JSON.stringify(stories));
-      el.value = "";
-      displayStories();
-    }
-    function deleteStory(index) {
-      const stories = JSON.parse(localStorage.getItem("stories") || "[]");
-      stories.splice(index, 1);
-      localStorage.setItem("stories", JSON.stringify(stories));
-      displayStories();
-    }
-    function displayStories() {
-      const stories = JSON.parse(localStorage.getItem("stories") || "[]");
-      const container = document.getElementById("postedStories");
-      container.innerHTML = "";
-      stories.forEach((story, i) => {
-        const div = document.createElement("div");
-        div.className = "story-box";
-        const h = document.createElement("h3"); h.textContent = `Story ${i+1}`;
-        const p = document.createElement("p"); p.textContent = story;
-        const listen = document.createElement("button"); listen.textContent = "🔊 Listen";
-        listen.addEventListener("click", () => speak(story));
-        const del = document.createElement("button"); del.textContent = "❌ Delete"; del.className = "delete-btn";
-        del.addEventListener("click", () => deleteStory(i));
-        div.append(h, p, listen, del);
-        container.appendChild(div);
-      });
-    }
-
-    // ---- Nav Active
     function setActive(link) {
       document.querySelectorAll("nav a").forEach(a => a.classList.remove("active"));
       link.classList.add("active");
     }
 
-    // ---- PWA Install prompt
+    /* ===========================
+       PWA / SERVICE WORKER
+       =========================== */
     let deferredPrompt;
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
@@ -167,17 +218,106 @@
       });
     });
 
-    // ---- Service Worker
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("./sw.js", { scope: "./" })
-        .then(() => console.log("Service Worker registered"));
+        .then(() => console.log("Service Worker registered"))
+        .catch(console.warn);
     }
 
-    // ---- Init
+    /* ===========================
+       FIREBASE
+       =========================== */
+    const firebaseConfig = {
+      apiKey: "PASTE_HERE",
+      authDomain: "PASTE_HERE",
+      projectId: "PASTE_HERE",
+      storageBucket: "PASTE_HERE",
+      messagingSenderId: "PASTE_HERE",
+      appId: "PASTE_HERE"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    db.enablePersistence().catch(console.warn);
+
+    let currentUserId = null;
+
+    auth.signInAnonymously()
+      .then(({ user }) => {
+        currentUserId = user.uid;
+        const authEl = document.getElementById("authStatus");
+        if (authEl) authEl.textContent = "Signed in anonymously ✓";
+        setupRealtime();
+      })
+      .catch((err) => {
+        console.error(err);
+        const authEl = document.getElementById("authStatus");
+        if (authEl) authEl.textContent = "Auth error — refresh the page.";
+      });
+
+    async function postStory() {
+      const el = document.getElementById("storyInput");
+      const text = el.value.trim();
+      if (!text) return;
+      if (!currentUserId) { alert("Signing in… please try again."); return; }
+
+      await db.collection("stories").add({
+        text,
+        authorId: currentUserId,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      el.value = "";
+    }
+
+    function setupRealtime() {
+      db.collection("stories").orderBy("createdAt", "desc")
+        .onSnapshot((snap) => {
+          const container = document.getElementById("postedStories");
+          if (!container) return;
+          container.innerHTML = "";
+          snap.forEach((doc) => {
+            const data = doc.data();
+            const div = document.createElement("div");
+            div.className = "story-box";
+
+            const h = document.createElement("h3");
+            const mine = data.authorId === currentUserId ? " (you)" : "";
+            h.textContent = "Story • " + (data.createdAt?.toDate?.().toLocaleString?.() || "…") + mine;
+
+            const p = document.createElement("p");
+            p.textContent = data.text;
+
+            const listen = document.createElement("button");
+            listen.textContent = "🔊 Listen";
+            listen.addEventListener("click", () => speak(data.text));
+
+            div.append(h, p, listen);
+
+            if (data.authorId === currentUserId) {
+              const del = document.createElement("button");
+              del.className = "delete-btn";
+              del.textContent = "❌ Delete";
+              del.addEventListener("click", async () => {
+                await db.collection("stories").doc(doc.id).delete();
+              });
+              div.append(del);
+            }
+
+            container.appendChild(div);
+          });
+        });
+    }
+
+    /* ===========================
+       INIT
+       =========================== */
     window.onload = () => {
       if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark");
-      displayStories();
+      populateVoices();   // try immediately
+      stopSpeech();       // ensure clean state
     };
-    <script src="script.js"></script>
+  </script>
 </body>
 </html>
