@@ -1,83 +1,152 @@
-// Import Firebase SDK modules (v9+ modular syntax)
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut }
-  from "https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs }
-  from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
-
-// ✅ Your Firebase config (copy from Firebase console)
+// ============================
+// 🔥 Firebase Setup
+// ============================
 const firebaseConfig = {
-  apiKey: "AIzaSy4R1kY3njEAK7mSWq6PX-hhSTepGy1PAQ",
-  authDomain: "mystoryapp-c7c76.firebaseapp.com",
-  projectId: "mystoryapp-c7c76",
-  storageBucket: "mystoryapp-c7c76.appspot.com",
-  messagingSenderId: "208809550277",
-  appId: "1:208809550277:web:77de6ce70e3e04203aabac"
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  projectId: "YOUR_PROJECT",
+  storageBucket: "YOUR_PROJECT.appspot.com",
+  messagingSenderId: "YOUR_SENDER_ID",
+  appId: "YOUR_APP_ID"
 };
 
-// ✅ Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
 
-// 🔹 Example: Sign up a user
-async function signup(email, password) {
-  try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    console.log("✅ User signed up:", userCredential.user);
-  } catch (error) {
-    console.error("❌ Signup error:", error.message);
+let currentUserId = null;
+
+// ============================
+// 🌙 Dark Mode Toggle
+// ============================
+function toggleTheme() {
+  document.body.classList.toggle("dark");
+}
+
+// ============================
+// 📌 Navbar Active State
+// ============================
+function setActive(el) {
+  document.querySelectorAll("nav a").forEach(a => a.classList.remove("active"));
+  el.classList.add("active");
+}
+
+// ============================
+// 🗣️ Text-to-Speech
+// ============================
+function speakById(id) {
+  let text = document.getElementById(id).innerText;
+  let utterance = new SpeechSynthesisUtterance(text);
+  utterance.rate = 1;
+  utterance.pitch = 1;
+  utterance.lang = "en-US";
+
+  // Optional: let reader pick a voice
+  let voices = speechSynthesis.getVoices();
+  if (voices.length > 0) {
+    utterance.voice = voices.find(v => v.name.includes("Google")) || voices[0];
+  }
+
+  speechSynthesis.speak(utterance);
+}
+
+// ============================
+// 📝 Post a Story
+// ============================
+async function postStory() {
+  const storyText = document.getElementById("storyInput").value;
+  if (!storyText.trim()) return alert("Write something before publishing!");
+
+  if (!currentUserId) return alert("Please login first to post.");
+
+  await db.collection("stories").add({
+    text: storyText,
+    user: currentUserId,
+    createdAt: Date.now()
+  });
+
+  document.getElementById("storyInput").value = "";
+  loadStories();
+}
+
+// ============================
+// 📂 Load Stories
+// ============================
+async function loadStories() {
+  const container = document.getElementById("postedStories");
+  container.innerHTML = "";
+
+  const snapshot = await db.collection("stories").orderBy("createdAt", "desc").get();
+  snapshot.forEach(doc => {
+    let data = doc.data();
+    let div = document.createElement("div");
+    div.classList.add("story-box");
+    div.innerHTML = `
+      <p>${data.text}</p>
+      <button onclick="deleteStory('${doc.id}')">🗑 Delete</button>
+    `;
+    container.appendChild(div);
+  });
+}
+
+// ============================
+// ❌ Delete Story
+// ============================
+async function deleteStory(id) {
+  if (confirm("Are you sure you want to delete this story?")) {
+    await db.collection("stories").doc(id).delete();
+    loadStories();
   }
 }
 
-// 🔹 Example: Login a user
-async function login(email, password) {
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    console.log("✅ User logged in:", userCredential.user);
-  } catch (error) {
-    console.error("❌ Login error:", error.message);
-  }
+// ============================
+// 👤 Firebase Auth
+// ============================
+async function signupEmail(email, password) {
+  await auth.createUserWithEmailAndPassword(email, password);
+}
+async function loginEmail(email, password) {
+  await auth.signInWithEmailAndPassword(email, password);
+}
+async function googleLogin() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  await auth.signInWithPopup(provider);
+}
+function logout() {
+  auth.signOut();
 }
 
-// 🔹 Example: Logout
-async function logout() {
-  try {
-    await signOut(auth);
-    console.log("✅ User signed out");
-  } catch (error) {
-    console.error("❌ Logout error:", error.message);
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUserId = user.uid;
+    document.getElementById("authStatus").innerText = `Logged in as ${user.email}`;
+    loadStories();
+  } else {
+    currentUserId = null;
+    document.getElementById("authStatus").innerText = "Not logged in.";
+    document.getElementById("postedStories").innerHTML = "";
   }
-}
+});
 
-// 🔹 Example: Save a story
-async function saveStory(title, content) {
-  try {
-    const docRef = await addDoc(collection(db, "stories"), {
-      title: title,
-      content: content,
-      timestamp: new Date()
-    });
-    console.log("✅ Story saved with ID:", docRef.id);
-  } catch (error) {
-    console.error("❌ Error saving story:", error.message);
-  }
-}
+// ============================
+// 📱 PWA Install Button
+// ============================
+let deferredPrompt;
+const installBtn = document.createElement("button");
+installBtn.textContent = "📲 Install App";
+installBtn.classList.add("install-btn");
+installBtn.style.display = "none";
+document.body.appendChild(installBtn);
 
-// 🔹 Example: Fetch all stories
-async function getStories() {
-  try {
-    const querySnapshot = await getDocs(collection(db, "stories"));
-    querySnapshot.forEach((doc) => {
-      console.log(`${doc.id} =>`, doc.data());
-    });
-  } catch (error) {
-    console.error("❌ Error fetching stories:", error.message);
-  }
-}
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  installBtn.style.display = "block";
+});
 
-// Example calls (delete later, just for test)
-// signup("test@example.com", "mypassword");
-// login("test@example.com", "mypassword");
-// saveStory("My First Story", "This is the content of the story.");
-// getStories();
+installBtn.addEventListener("click", async () => {
+  installBtn.style.display = "none";
+  deferredPrompt.prompt();
+  await deferredPrompt.userChoice;
+  deferredPrompt = null;
+});
