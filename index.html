@@ -3,25 +3,56 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>About Quinme</title>
-  <link rel="stylesheet" href="style.css">
+  <title>Quinme’s Stories</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f9f9f9;
+      text-align: center;
+      padding: 50px;
+    }
+    h1 { color: #333; }
+    p { color: #555; font-size: 18px; }
+    a, button {
+      display: inline-block;
+      margin-top: 20px;
+      text-decoration: none;
+      background: #007bff;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    a:hover, button:hover { background: #0056b3; }
+  </style>
 </head>
 <body>
-  <header>
-    <h1>About Me</h1>
-    <nav>
-      <a href="index.html">Home</a>
-      <a href="about.html">About</a>
-      <a href="links.html">Links</a>
-      <a href="contact.html">Contact</a>
-    </nav>
-  </header>
-  <main>
-    <h2>Hello, I'm Quinme!</h2>
-    <p>I’m a storyteller who loves weaving mystery, romance, and a touch of the unexpected into every tale. This site is my creative hub where you can explore my works, connect with me, and follow along as new chapters unfold.</p>
-  </main>
-  <footer>
-    <p>© Quinme 2025</p>
-  </footer>
+  <h1>Welcome to Quinme’s Story Blog 🎉</h1>
+  <p id="story">This is my space where I share my stories, from <b>The Tide Between Us</b> to <b>Beneath the Veil</b> and beyond.</p>
+
+  <!-- Facebook Link -->
+  <a href="https://www.facebook.com/share/1FMnjoy8Ku/?mibextid=wwXIfr" target="_blank">📖 Visit my Facebook</a>
+
+  <!-- Wattpad Link -->
+  <a href="https://www.wattpad.com/user/Quin_quinme" target="_blank">📚 Read on Wattpad</a>
+
+  <!-- Voice Over Button -->
+  <br><br>
+  <button onclick="speakStory()">🔊 Listen to Voice Over</button>
+  <button onclick="stopVoice()">⏹️ Stop</button>
+
+  <script>
+    let speech = null;
+    function speakStory() {
+      if (speech) window.speechSynthesis.cancel();
+      const text = document.getElementById("story").innerText;
+      speech = new SpeechSynthesisUtterance(text);
+      speech.lang = "en-US";
+      window.speechSynthesis.speak(speech);
+    }
+    function stopVoice() {
+      window.speechSynthesis.cancel();
+    }
+  </script>
 </body>
 </html>
