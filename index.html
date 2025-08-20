@@ -1,58 +1,239 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Quinme’s Stories</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Quinme Stories</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6200ea" />
+
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f9f9f9;
-      text-align: center;
-      padding: 50px;
-    }
-    h1 { color: #333; }
-    p { color: #555; font-size: 18px; }
-    a, button {
-      display: inline-block;
-      margin-top: 20px;
-      text-decoration: none;
-      background: #007bff;
-      color: white;
-      padding: 10px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    a:hover, button:hover { background: #0056b3; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin:0; padding:0; background:#fafafa; color:#222; transition:.3s background,.3s color; }
+    body.dark { background:#1e1e1e; color:#f5f5f5; }
+    header { background:#6200ea; color:#fff; padding:20px; text-align:center; position:relative; }
+    nav { display:flex; justify-content:center; flex-wrap:wrap; background:#3700b3; }
+    nav a { color:#fff; padding:14px 20px; text-decoration:none; display:block; }
+    nav a.active, nav a:hover { background:#6200ea; }
+    section { padding:20px; max-width:900px; margin:auto; }
+    footer { background:#333; color:#fff; text-align:center; padding:10px; margin-top:20px; }
+    button { margin-top:5px; padding:10px 14px; border:none; background:#6200ea; color:#fff; cursor:pointer; border-radius:6px; }
+    button:hover { background:#3700b3; }
+    .toggle { background:#444; position:absolute; right:15px; top:15px; }
+    textarea { width:100%; height:150px; margin-top:10px; padding:10px; border:1px solid #ccc; border-radius:6px; resize:vertical; font-size:14px; }
+    .story-box { margin-bottom:20px; padding:15px; border:1px solid #ddd; border-radius:8px; background:#fff; box-shadow:0 2px 5px rgba(0,0,0,.1); }
+    body.dark .story-box { background:#2a2a2a; border-color:#555; }
+    .delete-btn { background:crimson; margin-left:10px; }
+    .install-btn { position:fixed; right:20px; bottom:20px; border-radius:8px; }
+    .muted { opacity:.8; font-size:.9em; }
   </style>
 </head>
 <body>
-  <h1>Welcome to Quinme’s Story Blog 🎉</h1>
-  <p id="story">This is my space where I share my stories, from <b>The Tide Between Us</b> to <b>Beneath the Veil</b> and beyond.</p>
+  <header>
+    <h1>✨ Quinme Stories ✨</h1>
+    <button class="toggle" onclick="toggleTheme()">🌙</button>
+    <p class="muted">Beneath the Veil | The Tide Between Us | and more...</p>
+  </header>
 
-  <!-- Facebook Link -->
-  <a href="https://www.facebook.com/share/1FMnjoy8Ku/?mibextid=wwXIfr" target="_blank">📖 Visit my Facebook</a>
+  <nav>
+    <a href="#home" class="active" onclick="setActive(this)">Home</a>
+    <a href="#stories" onclick="setActive(this)">Stories</a>
+    <a href="#write" onclick="setActive(this)">Write</a>
+    <a href="#about" onclick="setActive(this)">About</a>
+    <a href="#contact" onclick="setActive(this)">Contact</a>
+  </nav>
 
-  <!-- Wattpad Link -->
-  <a href="https://www.wattpad.com/user/Quin_quinme" target="_blank">📚 Read on Wattpad</a>
+  <section id="home">
+    <h2>Welcome</h2>
+    <p>Step into my world of stories filled with mystery, romance, and imagination. Explore my works below!</p>
+  </section>
 
-  <!-- Voice Over Button -->
-  <br><br>
-  <button onclick="speakStory()">🔊 Listen to Voice Over</button>
-  <button onclick="stopVoice()">⏹️ Stop</button>
+  <section id="stories">
+    <h2>📚 My Stories</h2>
+
+    <div class="story-box">
+      <h3>The Tide Between Us</h3>
+      <p id="tide-text">Chapter One: The waves crashed against the shore as secrets long buried began to resurface...</p>
+      <button onclick="speakById('tide-text')">🔊 Listen</button>
+    </div>
+
+    <div class="story-box">
+      <h3>Beneath the Veil</h3>
+      <p id="veil-text">Chapter One: In the shadow of silence, whispers carried truths no one dared to speak...</p>
+      <button onclick="speakById('veil-text')">🔊 Listen</button>
+    </div>
+
+    <h3>Your Published Stories (sync across devices)</h3>
+    <div id="postedStories"></div>
+  </section>
+
+  <section id="write">
+    <h2>📝 Write Your Story</h2>
+    <p>Post your new chapter here:</p>
+    <textarea id="storyInput" placeholder="Start writing your story..."></textarea><br/>
+    <button onclick="postStory()">Publish</button>
+    <p class="muted" id="authStatus"></p>
+  </section>
+
+  <section id="about">
+    <h2>👩 About Me</h2>
+    <p>Hi, I’m <strong>Quinme</strong> — a storyteller who loves turning imagination into reality through words. My stories mix mystery, romance, and sometimes a touch of horror.</p>
+  </section>
+
+  <section id="contact">
+    <h2>📩 Contact</h2>
+    <ul>
+      <li><a href="https://www.wattpad.com/user/Quin_quinme" target="_blank">Wattpad</a></li>
+      <li><a href="https://www.facebook.com/share/1FMnjoy8Ku/?mibextid=wwXIfr" target="_blank">Facebook</a></li>
+    </ul>
+  </section>
+
+  <footer>
+    <p>© 2025 Quinme | All Rights Reserved</p>
+  </footer>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 
   <script>
-    let speech = null;
-    function speakStory() {
-      if (speech) window.speechSynthesis.cancel();
-      const text = document.getElementById("story").innerText;
-      speech = new SpeechSynthesisUtterance(text);
-      speech.lang = "en-US";
-      window.speechSynthesis.speak(speech);
+    // -------- Voice (TTS)
+    function speak(text) {
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US";
+      speechSynthesis.speak(u);
     }
-    function stopVoice() {
-      window.speechSynthesis.cancel();
+    function speakById(id) {
+      const text = document.getElementById(id).innerText;
+      speak(text);
     }
+
+    // -------- Theme
+    function toggleTheme() {
+      document.body.classList.toggle("dark");
+      localStorage.setItem("theme", document.body.classList.contains("dark") ? "dark" : "light");
+    }
+
+    // -------- Nav Active
+    function setActive(link) {
+      document.querySelectorAll("nav a").forEach(a => a.classList.remove("active"));
+      link.classList.add("active");
+    }
+
+    // -------- PWA Install
+    let deferredPrompt;
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+      const btn = document.createElement("button");
+      btn.className = "install-btn";
+      btn.textContent = "📲 Install App";
+      document.body.appendChild(btn);
+      btn.addEventListener("click", async () => {
+        btn.remove();
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+        deferredPrompt = null;
+      });
+    });
+
+    // -------- Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("./sw.js", { scope: "./" })
+        .then(() => console.log("Service Worker registered"));
+    }
+
+    // -------- Firebase (paste your config here)
+    const firebaseConfig = {
+      apiKey: "PASTE_HERE",
+      authDomain: "PASTE_HERE",
+      projectId: "PASTE_HERE",
+      storageBucket: "PASTE_HERE",
+      messagingSenderId: "PASTE_HERE",
+      appId: "PASTE_HERE"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    // enable offline cache for Firestore (syncs later)
+    db.enablePersistence().catch(console.warn);
+
+    let currentUserId = null;
+
+    // Anonymous sign-in so each device has an identity (works across devices too)
+    auth.signInAnonymously()
+      .then(({ user }) => {
+        currentUserId = user.uid;
+        document.getElementById("authStatus").textContent = "Signed in anonymously ✓";
+        setupRealtime();
+      })
+      .catch((err) => {
+        console.error(err);
+        document.getElementById("authStatus").textContent = "Auth error — refresh the page.";
+      });
+
+    // Create story in Firestore
+    async function postStory() {
+      const el = document.getElementById("storyInput");
+      const text = el.value.trim();
+      if (!text) return;
+      if (!currentUserId) { alert("Signing in… please try again."); return; }
+
+      await db.collection("stories").add({
+        text,
+        authorId: currentUserId,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      el.value = "";
+    }
+
+    // Real-time updates
+    function setupRealtime() {
+      db.collection("stories").orderBy("createdAt", "desc")
+        .onSnapshot((snap) => {
+          const container = document.getElementById("postedStories");
+          container.innerHTML = "";
+          snap.forEach((doc) => {
+            const data = doc.data();
+            const div = document.createElement("div");
+            div.className = "story-box";
+            const h = document.createElement("h3");
+            const mine = data.authorId === currentUserId ? " (you)" : "";
+            h.textContent = "Story • " + (data.createdAt?.toDate?.().toLocaleString?.() || "…") + mine;
+
+            const p = document.createElement("p");
+            p.textContent = data.text;
+
+            const listen = document.createElement("button");
+            listen.textContent = "🔊 Listen";
+            listen.addEventListener("click", () => speak(data.text));
+
+            div.append(h, p, listen);
+
+            // Show delete button only for your own stories
+            if (data.authorId === currentUserId) {
+              const del = document.createElement("button");
+              del.className = "delete-btn";
+              del.textContent = "❌ Delete";
+              del.addEventListener("click", async () => {
+                await db.collection("stories").doc(doc.id).delete();
+              });
+              div.append(del);
+            }
+
+            container.appendChild(div);
+          });
+        });
+    }
+
+    // ---- Init theme
+    window.onload = () => {
+      if (localStorage.getItem("theme") === "dark") document.body.classList.add("dark");
+    };
   </script>
 </body>
 </html>
