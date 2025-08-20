@@ -1,0 +1,8 @@
+const firebaseConfig = {
+  apiKey: "AIzaSyARKlRy3njEAK7mSWq6PX-hhSTepGy1PAQ",
+  authDomain: "mystoryapp-c7c76.firebaseapp.com",
+  projectId: "mystoryapp-c7c76",
+  storageBucket: "mystoryapp-c7c76.firebasestorage.app",
+  messagingSenderId: "208809550277",
+  appId: "1:208809550277:web:77de6ce70e3e04203aabac"
+};
